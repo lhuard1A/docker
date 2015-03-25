@@ -166,7 +166,6 @@ type Command struct {
 	AppArmorProfile    string            `json:"apparmor_profile"`
 	CgroupParent       string            `json:"cgroup_parent"` // The parent cgroup for this command.
 	Shm                string            `json:"shm"`
-	Mqueue             string            `json:"mqueue"`
 }
 
 func InitContainer(c *Command) *configs.Config {

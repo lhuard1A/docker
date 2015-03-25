@@ -23,7 +23,6 @@ import (
 	"github.com/docker/docker/daemon/execdriver/execdrivers"
 	"github.com/docker/docker/daemon/execdriver/lxc"
 	"github.com/docker/docker/daemon/graphdriver"
-	_ "github.com/docker/docker/daemon/graphdriver/mqueue"
 	_ "github.com/docker/docker/daemon/graphdriver/shm"
 	_ "github.com/docker/docker/daemon/graphdriver/vfs"
 	_ "github.com/docker/docker/daemon/networkdriver/bridge"
@@ -102,7 +101,6 @@ type Daemon struct {
 	sysInfo          *sysinfo.SysInfo
 	volumes          *vol.Repository
 	shm              *vol.Repository
-	mqueue           *vol.Repository
 	eng              *engine.Engine
 	config           *Config
 	containerGraph   *graphdb.Database
@@ -951,13 +949,6 @@ func NewDaemonFromDirectory(config *Config, eng *engine.Engine) (*Daemon, error)
 		return nil, err
 	}
 
-	mqueueDriver, err := graphdriver.GetDriver("mqueue", config.Root, config.GraphOptions)
-
-	mqueue, err := vol.NewRepository(filepath.Join(config.Root, "mqueue"), mqueueDriver)
-	if err != nil {
-		return nil, err
-	}
-
 	trustKey, err := api.LoadOrCreateTrustKey(config.TrustKeyPath)
 	if err != nil {
 		return nil, err
@@ -1046,7 +1037,6 @@ func NewDaemonFromDirectory(config *Config, eng *engine.Engine) (*Daemon, error)
 		sysInfo:          sysInfo,
 		volumes:          volumes,
 		shm:              shm,
-		mqueue:           mqueue,
 		config:           config,
 		containerGraph:   graph,
 		driver:           driver,
