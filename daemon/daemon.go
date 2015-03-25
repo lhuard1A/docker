@@ -23,6 +23,8 @@ import (
 	"github.com/docker/docker/daemon/execdriver/execdrivers"
 	"github.com/docker/docker/daemon/execdriver/lxc"
 	"github.com/docker/docker/daemon/graphdriver"
+	_ "github.com/docker/docker/daemon/graphdriver/mqueue"
+	_ "github.com/docker/docker/daemon/graphdriver/shm"
 	_ "github.com/docker/docker/daemon/graphdriver/vfs"
 	_ "github.com/docker/docker/daemon/networkdriver/bridge"
 	"github.com/docker/docker/daemon/networkdriver/portallocator"
@@ -43,7 +45,7 @@ import (
 	"github.com/docker/docker/runconfig"
 	"github.com/docker/docker/trust"
 	"github.com/docker/docker/utils"
-	"github.com/docker/docker/volumes"
+	vol "github.com/docker/docker/volumes"
 
 	"github.com/go-fsnotify/fsnotify"
 )
@@ -98,7 +100,9 @@ type Daemon struct {
 	repositories     *graph.TagStore
 	idIndex          *truncindex.TruncIndex
 	sysInfo          *sysinfo.SysInfo
-	volumes          *volumes.Repository
+	volumes          *vol.Repository
+	shm              *vol.Repository
+	mqueue           *vol.Repository
 	eng              *engine.Engine
 	config           *Config
 	containerGraph   *graphdb.Database
@@ -935,7 +939,21 @@ func NewDaemonFromDirectory(config *Config, eng *engine.Engine) (*Daemon, error)
 		return nil, err
 	}
 
-	volumes, err := volumes.NewRepository(filepath.Join(config.Root, "volumes"), volumesDriver)
+	volumes, err := vol.NewRepository(filepath.Join(config.Root, "volumes"), volumesDriver)
+	if err != nil {
+		return nil, err
+	}
+
+	shmDriver, err := graphdriver.GetDriver("shm", config.Root, config.GraphOptions)
+
+	shm, err := vol.NewRepository(filepath.Join(config.Root, "shm"), shmDriver)
+	if err != nil {
+		return nil, err
+	}
+
+	mqueueDriver, err := graphdriver.GetDriver("mqueue", config.Root, config.GraphOptions)
+
+	mqueue, err := vol.NewRepository(filepath.Join(config.Root, "mqueue"), mqueueDriver)
 	if err != nil {
 		return nil, err
 	}
@@ -1027,6 +1045,8 @@ func NewDaemonFromDirectory(config *Config, eng *engine.Engine) (*Daemon, error)
 		idIndex:          truncindex.NewTruncIndex([]string{}),
 		sysInfo:          sysInfo,
 		volumes:          volumes,
+		shm:              shm,
+		mqueue:           mqueue,
 		config:           config,
 		containerGraph:   graph,
 		driver:           driver,

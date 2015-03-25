@@ -72,6 +72,7 @@ func Parse(cmd *flag.FlagSet, args []string) (*Config, *HostConfig, *flag.FlagSe
 		flReadonlyRootfs  = cmd.Bool([]string{"-read-only"}, false, "Mount the container's root filesystem as read only")
 		flLoggingDriver   = cmd.String([]string{"-log-driver"}, "", "Logging driver for container")
 		flCgroupParent    = cmd.String([]string{"-cgroup-parent"}, "", "Optional parent cgroup for the container")
+		flPosixMode       = cmd.String([]string{"-posix"}, "", "Posix IPC to use")
 	)
 
 	cmd.Var(&flAttach, []string{"a", "-attach"}, "Attach to STDIN, STDOUT or STDERR")
@@ -265,6 +266,11 @@ func Parse(cmd *flag.FlagSet, args []string) (*Config, *HostConfig, *flag.FlagSe
 		return nil, nil, cmd, fmt.Errorf("--ipc: invalid IPC mode")
 	}
 
+	posixMode := PosixMode(*flPosixMode)
+	if !posixMode.Valid() {
+		return nil, nil, cmd, fmt.Errorf("--posix: invalide POSIX mode")
+	}
+
 	pidMode := PidMode(*flPidMode)
 	if !pidMode.Valid() {
 		return nil, nil, cmd, fmt.Errorf("--pid: invalid PID mode")
@@ -324,6 +330,7 @@ func Parse(cmd *flag.FlagSet, args []string) (*Config, *HostConfig, *flag.FlagSe
 		VolumesFrom:     flVolumesFrom.GetAll(),
 		NetworkMode:     netMode,
 		IpcMode:         ipcMode,
+		PosixMode:       posixMode,
 		PidMode:         pidMode,
 		Devices:         deviceMappings,
 		CapAdd:          flCapAdd.GetAll(),

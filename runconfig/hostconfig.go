@@ -67,6 +67,44 @@ func (n IpcMode) Container() string {
 	return ""
 }
 
+type PosixMode string
+
+// IsPrivate indicates whether container use it's private posix stack
+func (n PosixMode) IsPrivate() bool {
+	return !(n.IsHost() || n.IsContainer())
+}
+
+func (n PosixMode) IsHost() bool {
+	return n == "host"
+}
+
+func (n PosixMode) IsContainer() bool {
+	parts := strings.SplitN(string(n), ":", 2)
+	return len(parts) > 1 && parts[0] == "container"
+}
+
+func (n PosixMode) Valid() bool {
+	parts := strings.Split(string(n), ":")
+	switch mode := parts[0]; mode {
+	case "", "host":
+	case "container":
+		if len(parts) != 2 || parts[1] == "" {
+			return false
+		}
+	default:
+		return false
+	}
+	return true
+}
+
+func (n PosixMode) Container() string {
+	parts := strings.SplitN(string(n), ":", 2)
+	if len(parts) > 1 {
+		return parts[1]
+	}
+	return ""
+}
+
 type PidMode string
 
 // IsPrivate indicates whether container use it's private pid stack
@@ -123,6 +161,7 @@ type HostConfig struct {
 	Devices         []DeviceMapping
 	NetworkMode     NetworkMode
 	IpcMode         IpcMode
+	PosixMode       PosixMode
 	PidMode         PidMode
 	CapAdd          []string
 	CapDrop         []string

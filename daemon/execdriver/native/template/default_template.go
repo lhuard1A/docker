@@ -60,19 +60,19 @@ func New() *configs.Config {
 				Flags:       syscall.MS_NOSUID | syscall.MS_NOEXEC,
 				Data:        "newinstance,ptmxmode=0666,mode=0620,gid=5",
 			},
-			{
-				Device:      "tmpfs",
-				Source:      "shm",
-				Destination: "/dev/shm",
-				Data:        "mode=1777,size=65536k",
-				Flags:       defaultMountFlags,
-			},
-			{
-				Source:      "mqueue",
-				Destination: "/dev/mqueue",
-				Device:      "mqueue",
-				Flags:       defaultMountFlags,
-			},
+			// {
+			// 	Device:      "tmpfs",
+			// 	Source:      "shm",
+			// 	Destination: "/dev/shm",
+			// 	Data:        "mode=1777,size=65536k",
+			// 	Flags:       defaultMountFlags,
+			// },
+			// {
+			// 	Source:      "mqueue",
+			// 	Destination: "/dev/mqueue",
+			// 	Device:      "mqueue",
+			// 	Flags:       defaultMountFlags,
+			// },
 			{
 				Source:      "sysfs",
 				Destination: "/sys",

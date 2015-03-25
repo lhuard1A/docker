@@ -207,7 +207,125 @@ func (container *Container) parseVolumeMountConfig() (map[string]*Mount, error) 
 		}
 	}
 
+	// Get the special shm and mqueue mounts
+	if _, exists := mounts["/dev/shm"]; !exists {
+		if _, exists := container.Volumes["/dev/shm"]; !exists {
+			if shm, err := container.parseShmConfig(); err != nil {
+				return nil, err
+			} else {
+				mounts["/dev/shm"] = shm
+			}
+		}
+	}
+	if _, exists := mounts["/dev/mqueue"]; !exists {
+		if _, exists := container.Volumes["/dev/mqueue"]; !exists {
+			if mqueue, err := container.parseMqueueConfig(); err != nil {
+				return nil, err
+			} else {
+				mounts["/dev/mqueue"] = mqueue
+			}
+		}
+	}
+
 	return mounts, nil
+}
+
+func (container *Container) parseShmConfig() (*Mount, error) {
+	if container.hostConfig.PosixMode.IsHost() {
+		vol, err := container.daemon.shm.FindOrCreateVolume("/dev/shm", true)
+		if err != nil {
+			return nil, err
+		}
+		return &Mount{
+			container:   container,
+			volume:      vol,
+			MountToPath: "/dev/shm",
+			Writable:    true,
+		}, nil
+	}
+
+	if container.hostConfig.PosixMode.IsContainer() {
+		c, err := container.getPosixContainer()
+		if err != nil {
+			return nil, err
+		}
+		path, exists := c.Volumes["/dev/shm"]
+		if !exists {
+			return nil, fmt.Errorf("container %s misses /dev/shm", c.ID)
+		}
+		return &Mount{
+			container:   container,
+			volume:      c.daemon.shm.Get(path),
+			MountToPath: "/dev/shm",
+			Writable:    true,
+		}, nil
+	}
+
+	vol, err := container.daemon.shm.FindOrCreateVolume("", true)
+	if err != nil {
+		return nil, err
+	}
+	return &Mount{
+		container:   container,
+		volume:      vol,
+		MountToPath: "/dev/shm",
+		Writable:    true,
+	}, nil
+}
+
+func (container *Container) parseMqueueConfig() (*Mount, error) {
+	if container.hostConfig.PosixMode.IsHost() {
+		vol, err := container.daemon.mqueue.FindOrCreateVolume("/dev/mqueue", true)
+		if err != nil {
+			return nil, err
+		}
+		return &Mount{
+			container:   container,
+			volume:      vol,
+			MountToPath: "/dev/mqueue",
+			Writable:    true,
+		}, nil
+	}
+
+	if container.hostConfig.PosixMode.IsContainer() {
+		c, err := container.getPosixContainer()
+		if err != nil {
+			return nil, err
+		}
+		path, exists := c.Volumes["/dev/mqueue"]
+		if !exists {
+			return nil, fmt.Errorf("container %s misses /dev/mqueue", c.ID)
+		}
+		return &Mount{
+			container:   container,
+			volume:      c.daemon.mqueue.Get(path),
+			MountToPath: "/dev/mqueue",
+			Writable:    true,
+		}, nil
+	}
+
+	vol, err := container.daemon.mqueue.FindOrCreateVolume("", true)
+	if err != nil {
+		return nil, err
+	}
+	return &Mount{
+		container:   container,
+		volume:      vol,
+		MountToPath: "/dev/mqueue",
+		Writable:    true,
+	}, nil
+}
+
+func (container *Container) getPosixContainer() (*Container, error) {
+	containerID := container.hostConfig.PosixMode.Container()
+	c, err := container.daemon.Get(containerID)
+	if err != nil {
+		return nil, ErrContainerStart
+	}
+	if !c.IsRunning() {
+		return nil, fmt.Errorf("cannot join Posix IPC of a non running container: %s", containerID)
+	}
+	return c, nil
 }
 
 func parseBindMountSpec(spec string) (string, string, bool, error) {
